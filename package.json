@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon src/index.ts",
-    "build": "tsc",
+    "build": "npm rebuild sqlite3 --build-from-source && tsc",
     "start": "node dist/index.js"
   },
   "keywords": [],
