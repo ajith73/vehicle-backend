@@ -6,6 +6,8 @@ import { MechanicUpdateRequest } from './MechanicUpdateRequest';
 import { Feedback } from './Feedback';
 import { Donation } from './Donation';
 import { ActivityLog } from './ActivityLog';
+import { VehicleType } from './VehicleType';
+import { ServiceType } from './ServiceType';
 
 // Relationships
 Role.hasMany(User, { foreignKey: 'roleId' });
@@ -38,4 +40,6 @@ export {
   Feedback,
   Donation,
   ActivityLog,
+  VehicleType,
+  ServiceType,
 };

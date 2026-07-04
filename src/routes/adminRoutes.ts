@@ -4,6 +4,7 @@ import * as userController from '../controllers/userController';
 import * as dashboardController from '../controllers/dashboardController';
 import * as mechanicController from '../controllers/mechanicController';
 import * as feedbackController from '../controllers/feedbackController';
+import * as settingsController from '../controllers/settingsController';
 
 export const adminRoutes = Router();
 
@@ -43,3 +44,13 @@ adminRoutes.get('/feedback', feedbackController.getFeedback as any);
 adminRoutes.put('/feedback/:id', feedbackController.updateFeedback as any);
 adminRoutes.delete('/feedback/:id', superAdminOnly, feedbackController.deleteFeedback as any);
 adminRoutes.get('/donations', feedbackController.getDonations as any);
+
+// Settings
+adminRoutes.put('/vehicles/featured', superAdminOnly, settingsController.updateFeaturedVehicles as any);
+adminRoutes.post('/vehicles', superAdminOnly, settingsController.addVehicle as any);
+adminRoutes.put('/vehicles/:id', superAdminOnly, settingsController.updateVehicle as any);
+adminRoutes.delete('/vehicles/:id', superAdminOnly, settingsController.deleteVehicle as any);
+adminRoutes.put('/services/featured', superAdminOnly, settingsController.updateFeaturedServices as any);
+adminRoutes.post('/services', superAdminOnly, settingsController.addService as any);
+adminRoutes.put('/services/:id', superAdminOnly, settingsController.updateService as any);
+adminRoutes.delete('/services/:id', superAdminOnly, settingsController.deleteService as any);

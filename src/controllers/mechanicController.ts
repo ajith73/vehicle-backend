@@ -14,6 +14,7 @@ export const getMechanics = async (req: AuthRequest, res: Response) => {
 export const getMechanicById = async (req: AuthRequest, res: Response) => {
   try {
     const mechanicId = parseInt(req.params.id as string, 10);
+    if (isNaN(mechanicId)) return res.status(400).json({ error: 'Invalid Mechanic ID' });
     const mechanic = await Mechanic.findByPk(mechanicId);
     if (!mechanic) return res.status(404).json({ error: 'Mechanic not found' });
     res.json(mechanic);
@@ -27,6 +28,7 @@ export const createMechanic = async (req: AuthRequest, res: Response) => {
     const mechanicData = req.body;
     const mechanic = await Mechanic.create({
       ...mechanicData,
+      name: mechanicData.businessName || mechanicData.name, // Ensure name is populated as fallback
       status: 'Pending',
       createdById: req.user?.userId
     });
@@ -34,7 +36,7 @@ export const createMechanic = async (req: AuthRequest, res: Response) => {
     await ActivityLog.create({
       userId: req.user?.userId,
       action: 'Created Mechanic',
-      details: `Mechanic ${mechanic.dataValues.name} created and pending approval.`
+      details: `Mechanic ${mechanic.dataValues.businessName || mechanic.dataValues.name} created and pending approval.`
     });
 
     res.status(201).json(mechanic);

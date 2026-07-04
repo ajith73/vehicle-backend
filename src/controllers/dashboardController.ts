@@ -16,6 +16,11 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
       order: [['createdAt', 'DESC']]
     });
 
+    const recentMechanics = await Mechanic.findAll({
+      limit: 5,
+      order: [['createdAt', 'DESC']]
+    });
+
     const allMechanics = await Mechanic.findAll({ attributes: ['city', 'createdAt'] });
     
     const cityCount: Record<string, number> = {};
@@ -46,6 +51,7 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
       feedbackCount,
       donationCount,
       recentActivities,
+      recentMechanics,
       mechanicsByCity,
       mechanicsByDate
     });

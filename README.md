@@ -1,5 +1,7 @@
 # MechanicFinder Backend
 
+Live at - https://vehicle-backend-iart.onrender.com
+
 The core API for **MechanicFinder** – powering the discovery, administration, and feedback engines for on-demand vehicle repair.
 
 ## 🚀 Technologies Used
@@ -14,6 +16,12 @@ The core API for **MechanicFinder** – powering the discovery, administration, 
 - `/src/controllers/`: Business logic separating public API queries from Admin mutations.
 - `/src/db/`: Database initialization and schema management.
 - `/src/seeders/`: Dummy data generation for testing.
+
+## 🌟 Key Features
+- **Public API**: Fetch active mechanics and global configurations (vehicle/service types).
+- **Mechanic API**: Profile management and status updates.
+- **Admin API**: Approval workflows, user feedback, and system settings (manage vehicle and service types).
+- **Authentication**: JWT-based secure access.
 
 ## 🛠️ Local Development
 

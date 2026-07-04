@@ -20,9 +20,9 @@ export const getMechanics = async (req: Request, res: Response) => {
     }
 
     res.json(filtered);
-  } catch (error) {
+  } catch (error: any) {
     console.error(error);
-    res.status(500).json({ error: 'Failed to fetch mechanics' });
+    res.status(500).json({ error: error.message || 'Failed to fetch mechanics' });
   }
 };
 
