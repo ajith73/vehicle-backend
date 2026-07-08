@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "nodemon src/index.ts",
     "build": "tsc",
-    "start": "NODE_ENV=production node dist/index.js"
+    "start": "node scripts/start.js",
+    "migrate": "ts-node src/scripts/migrate.ts",
+    "db:drop": "ts-node src/scripts/dropDatabase.ts"
   },
   "keywords": [],
   "author": "",

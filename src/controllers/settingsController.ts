@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { VehicleType, ServiceType } from '../models';
+import { handleControllerError } from '../utils/controller';
 
 // Public endpoints
 export const getVehicles = async (req: Request, res: Response) => {
@@ -7,7 +8,7 @@ export const getVehicles = async (req: Request, res: Response) => {
     const vehicles = await VehicleType.findAll({ order: [['isFeatured', 'DESC'], ['orderIndex', 'ASC'], ['name', 'ASC']] });
     res.json(vehicles);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch vehicles' });
+    handleControllerError(req, res, error, 'Failed to fetch vehicles');
   }
 };
 
@@ -16,7 +17,7 @@ export const getServices = async (req: Request, res: Response) => {
     const services = await ServiceType.findAll({ order: [['isFeatured', 'DESC'], ['orderIndex', 'ASC'], ['name', 'ASC']] });
     res.json(services);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch services' });
+    handleControllerError(req, res, error, 'Failed to fetch services');
   }
 };
 
@@ -27,7 +28,7 @@ export const addVehicle = async (req: Request, res: Response) => {
     const vehicle = await VehicleType.create({ name });
     res.status(201).json(vehicle);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to create vehicle type' });
+    handleControllerError(req, res, error, 'Failed to create vehicle type');
   }
 };
 
@@ -37,7 +38,7 @@ export const deleteVehicle = async (req: Request, res: Response) => {
     await VehicleType.destroy({ where: { id } });
     res.json({ message: 'Deleted successfully' });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to delete vehicle type' });
+    handleControllerError(req, res, error, 'Failed to delete vehicle type');
   }
 };
 
@@ -48,7 +49,7 @@ export const updateVehicle = async (req: Request, res: Response) => {
     await VehicleType.update({ name }, { where: { id } });
     res.json({ message: 'Updated successfully' });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update vehicle type' });
+    handleControllerError(req, res, error, 'Failed to update vehicle type');
   }
 };
 
@@ -58,7 +59,7 @@ export const addService = async (req: Request, res: Response) => {
     const service = await ServiceType.create({ name });
     res.status(201).json(service);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to create service type' });
+    handleControllerError(req, res, error, 'Failed to create service type');
   }
 };
 
@@ -68,7 +69,7 @@ export const deleteService = async (req: Request, res: Response) => {
     await ServiceType.destroy({ where: { id } });
     res.json({ message: 'Deleted successfully' });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to delete service type' });
+    handleControllerError(req, res, error, 'Failed to delete service type');
   }
 };
 
@@ -79,16 +80,13 @@ export const updateService = async (req: Request, res: Response) => {
     await ServiceType.update({ name }, { where: { id } });
     res.json({ message: 'Updated successfully' });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update service type' });
+    handleControllerError(req, res, error, 'Failed to update service type');
   }
 };
 
 export const updateFeaturedVehicles = async (req: Request, res: Response) => {
   try {
     const { ids } = req.body; // array of ids in order
-    if (!Array.isArray(ids)) {
-      return res.status(400).json({ error: 'ids must be an array' });
-    }
     
     // Reset all
     await VehicleType.update({ isFeatured: false, orderIndex: 0 }, { where: {} });
@@ -99,16 +97,13 @@ export const updateFeaturedVehicles = async (req: Request, res: Response) => {
     }
     res.json({ message: 'Featured vehicles updated' });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update featured vehicles' });
+    handleControllerError(req, res, error, 'Failed to update featured vehicles');
   }
 };
 
 export const updateFeaturedServices = async (req: Request, res: Response) => {
   try {
     const { ids } = req.body; // array of ids in order
-    if (!Array.isArray(ids)) {
-      return res.status(400).json({ error: 'ids must be an array' });
-    }
     
     // Reset all
     await ServiceType.update({ isFeatured: false, orderIndex: 0 }, { where: {} });
@@ -119,6 +114,6 @@ export const updateFeaturedServices = async (req: Request, res: Response) => {
     }
     res.json({ message: 'Featured services updated' });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update featured services' });
+    handleControllerError(req, res, error, 'Failed to update featured services');
   }
 };

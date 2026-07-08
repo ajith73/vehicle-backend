@@ -1,6 +1,9 @@
 import bcrypt from 'bcrypt';
 import { sequelize } from '../config/database';
-import { Role, User, VehicleType, ServiceType, Mechanic } from '../models';
+import { Role, User, VehicleType, ServiceType } from '../models';
+import { logger } from '../lib/logger';
+import { runMigrations } from '../migrations/runner';
+import { dropDatabase, shouldDropDatabaseOnStart } from '../utils/databaseLifecycle';
 
 const DEFAULT_SERVICES = [
   "Puncture Repair", "Battery Jumpstart", "Battery Replacement", 
@@ -22,11 +25,14 @@ const DEFAULT_VEHICLES = [
 export async function setupDatabase() {
   try {
     await sequelize.authenticate();
-    console.log('Database connection has been established successfully.');
+    logger.info('database_connection_established');
 
-    // Sync all models safely (creates missing tables without dropping)
-    await sequelize.sync();
-    console.log('Database synced safely.');
+    if (shouldDropDatabaseOnStart()) {
+      logger.warn('database_drop_on_start_enabled');
+      await dropDatabase();
+    }
+
+    await runMigrations();
 
     // Seed Vehicles
     for (const v of DEFAULT_VEHICLES) {
@@ -46,7 +52,7 @@ export async function setupDatabase() {
     const adminPassword = process.env.SUPERADMIN_PASSWORD || 'admin123';
 
     if (!process.env.SUPERADMIN_USERNAME) {
-      console.warn('⚠️ SUPERADMIN_USERNAME not found in .env. Using default: admin@vehicle.com');
+      logger.warn('superadmin_username_missing_using_default');
     }
     
     const superAdminExists = await User.findOne({ where: { username: adminEmail } });
@@ -59,9 +65,10 @@ export async function setupDatabase() {
         roleId: superAdminRole.dataValues.id,
         allowedScreens: ['*']
       });
-      console.log('Super Admin seeded successfully.');
+      logger.info('super_admin_seeded');
     }
   } catch (error) {
-    console.error('Unable to connect to the database:', error);
+    logger.error('database_setup_failed', { error });
+    throw error;
   }
 }

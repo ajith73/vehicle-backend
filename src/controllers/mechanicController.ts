@@ -1,13 +1,14 @@
 import { Response } from 'express';
 import { Mechanic, MechanicUpdateRequest, ActivityLog, User } from '../models';
 import { AuthRequest } from '../middleware/authMiddleware';
+import { handleControllerError } from '../utils/controller';
 
 export const getMechanics = async (req: AuthRequest, res: Response) => {
   try {
     const mechanics = await Mechanic.findAll();
     res.json(mechanics);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch mechanics' });
+    handleControllerError(req, res, error, 'Failed to fetch mechanics');
   }
 };
 
@@ -19,7 +20,7 @@ export const getMechanicById = async (req: AuthRequest, res: Response) => {
     if (!mechanic) return res.status(404).json({ error: 'Mechanic not found' });
     res.json(mechanic);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch mechanic' });
+    handleControllerError(req, res, error, 'Failed to fetch mechanic');
   }
 };
 
@@ -41,16 +42,13 @@ export const createMechanic = async (req: AuthRequest, res: Response) => {
 
     res.status(201).json(mechanic);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to create mechanic' });
+    handleControllerError(req, res, error, 'Failed to create mechanic');
   }
 };
 
 export const bulkCreateMechanics = async (req: AuthRequest, res: Response) => {
   try {
     const mechanics = req.body.mechanics;
-    if (!Array.isArray(mechanics) || mechanics.length === 0) {
-      return res.status(400).json({ error: 'Invalid payload. Expected array of mechanics.' });
-    }
 
     const mechanicsPayload = mechanics.map((mechanicData: any) => ({
       ...mechanicData,
@@ -68,8 +66,7 @@ export const bulkCreateMechanics = async (req: AuthRequest, res: Response) => {
 
     res.status(201).json({ message: 'Bulk upload successful', count: createdMechanics.length });
   } catch (error: any) {
-    console.error('Bulk Create Error:', error);
-    res.status(500).json({ error: 'Failed to bulk create mechanics: ' + (error.message || error) });
+    handleControllerError(req, res, error, 'Failed to bulk create mechanics');
   }
 };
 
@@ -102,16 +99,13 @@ export const updateMechanic = async (req: AuthRequest, res: Response) => {
       return res.status(201).json({ message: 'Update request submitted', request });
     }
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update mechanic' });
+    handleControllerError(req, res, error, 'Failed to update mechanic');
   }
 };
 
 export const bulkUpdateMechanicsStatus = async (req: AuthRequest, res: Response) => {
   try {
     const { ids, status } = req.body;
-    if (!Array.isArray(ids) || ids.length === 0 || !status) {
-      return res.status(400).json({ error: 'Invalid payload' });
-    }
     
     await Mechanic.update({ status, approvedById: status === 'Approved' ? req.user?.userId : null }, { where: { id: ids } });
     
@@ -123,7 +117,7 @@ export const bulkUpdateMechanicsStatus = async (req: AuthRequest, res: Response)
 
     res.json({ message: 'Mechanics updated successfully' });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to bulk update mechanics' });
+    handleControllerError(req, res, error, 'Failed to bulk update mechanics');
   }
 };
 
@@ -142,7 +136,7 @@ export const deleteMechanic = async (req: AuthRequest, res: Response) => {
 
     res.json({ message: 'Mechanic deleted successfully' });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to delete mechanic' });
+    handleControllerError(req, res, error, 'Failed to delete mechanic');
   }
 };
 
@@ -156,10 +150,10 @@ export const approveMechanic = async (req: AuthRequest, res: Response) => {
       action: 'Approved Mechanic',
       details: `Mechanic ID ${mechanicId} was approved.`
     });
-
+    
     res.json({ message: 'Mechanic approved' });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to approve mechanic' });
+    handleControllerError(req, res, error, 'Failed to approve mechanic');
   }
 };
 
@@ -173,7 +167,7 @@ export const getUpdateRequests = async (req: AuthRequest, res: Response) => {
     });
     res.json(requests);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch update requests' });
+    handleControllerError(req, res, error, 'Failed to fetch update requests');
   }
 };
 
@@ -197,7 +191,7 @@ export const approveUpdateRequest = async (req: AuthRequest, res: Response) => {
 
     res.json({ message: 'Update applied successfully' });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to approve update request' });
+    handleControllerError(req, res, error, 'Failed to approve update request');
   }
 };
 
@@ -211,6 +205,6 @@ export const rejectUpdateRequest = async (req: AuthRequest, res: Response) => {
 
     res.json({ message: 'Update request rejected' });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to reject update request' });
+    handleControllerError(req, res, error, 'Failed to reject update request');
   }
 };

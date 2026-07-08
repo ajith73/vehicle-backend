@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { Mechanic, MechanicUpdateRequest, Feedback, Donation, ActivityLog, User } from '../models';
 import { AuthRequest } from '../middleware/authMiddleware';
+import { handleControllerError } from '../utils/controller';
 
 export const getDashboardStats = async (req: AuthRequest, res: Response) => {
   try {
@@ -56,7 +57,7 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
       mechanicsByDate
     });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch dashboard stats' });
+    handleControllerError(req, res, error, 'Failed to fetch dashboard stats');
   }
 };
 
@@ -68,6 +69,6 @@ export const getActivityLogs = async (req: AuthRequest, res: Response) => {
     });
     res.json(logs);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch activity logs' });
+    handleControllerError(req, res, error, 'Failed to fetch activity logs');
   }
 };

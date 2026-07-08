@@ -1,61 +1,102 @@
-# MechanicFinder Backend
+# Vehicle Assist Backend
 
-Live at - https://vehicle-backend-iart.onrender.com
+Express + TypeScript API for the Vehicle Assist platform. It powers public mechanic discovery, admin authentication, dashboard analytics, mechanic approval workflows, feedback collection, donations, and settings management.
 
-The core API for **MechanicFinder** – powering the discovery, administration, and feedback engines for on-demand vehicle repair.
+## Stack
 
-## 🚀 Technologies Used
-- **Framework**: Express.js
-- **Language**: TypeScript
-- **Database**: SQLite (via `sqlite3` / `sqlite`)
-- **Authentication**: JWT (JSON Web Tokens)
-- **Encryption**: bcryptjs
+- Express 5
+- TypeScript
+- Sequelize
+- PostgreSQL
+- JWT authentication
+- bcrypt password hashing
 
-## 📁 Architecture
-- `/src/routes/`: Express route definitions.
-- `/src/controllers/`: Business logic separating public API queries from Admin mutations.
-- `/src/db/`: Database initialization and schema management.
-- `/src/seeders/`: Dummy data generation for testing.
+## What This Service Does
 
-## 🌟 Key Features
-- **Public API**: Fetch active mechanics and global configurations (vehicle/service types).
-- **Mechanic API**: Profile management and status updates.
-- **Admin API**: Approval workflows, user feedback, and system settings (manage vehicle and service types).
-- **Authentication**: JWT-based secure access.
+- Exposes public endpoints for mechanics, vehicle types, service types, feedback, and donations
+- Supports admin login and protected admin APIs
+- Manages mechanics, including create, update, delete, bulk upload, and approval flows
+- Supports role-based access for `Super Admin` and `Admin`
+- Tracks update requests when non-super-admin users edit mechanics
+- Provides dashboard metrics and activity logs
+- Seeds default vehicle types, service types, roles, and a super admin user on startup
 
-## 🛠️ Local Development
+## Project Structure
 
-### 1. Install Dependencies
-```bash
-npm install
-```
+- `src/index.ts`: app bootstrap, middleware, `/api` routes, health endpoint
+- `src/routes/`: auth, public, and admin route groups
+- `src/controllers/`: request handlers for auth, dashboard, mechanics, feedback, settings, and users
+- `src/models/`: Sequelize models
+- `src/config/database.ts`: database connection setup
+- `src/seeders/index.ts`: schema sync and default seed data
 
-### 2. Environment Variables
-Create a `.env` file in the root directory:
+## API Overview
+
+Base path: `/api`
+
+- `GET /health`
+- `POST /auth/login`
+- `GET /public/mechanics`
+- `POST /public/feedback`
+- `POST /public/donation`
+- `GET /public/vehicles`
+- `GET /public/services`
+- `GET /admin/dashboard`
+- `GET /admin/activity-logs`
+- `GET|POST|PUT|DELETE /admin/users`
+- `GET|POST|PUT|DELETE /admin/mechanics`
+- `POST /admin/mechanics/bulk`
+- `PUT /admin/mechanics/bulk/status`
+- `POST /admin/mechanics/:id/approve`
+- `GET /admin/update-requests`
+- `POST /admin/update-requests/:id/approve`
+- `POST /admin/update-requests/:id/reject`
+- `GET|PUT|DELETE /admin/feedback`
+- `GET /admin/donations`
+- `POST|PUT|DELETE /admin/vehicles`
+- `PUT /admin/vehicles/featured`
+- `POST|PUT|DELETE /admin/services`
+- `PUT /admin/services/featured`
+
+## Environment Variables
+
+Create a `.env` file in `vehicle-backend/`.
+
 ```env
 PORT=5000
-JWT_SECRET=your_super_secret_jwt_key
+NODE_ENV=development
+DATABASE_URL_LOCAL=postgres://username:password@localhost:5432/vehicle_assist
+DATABASE_URL_PROD=postgres://username:password@host:5432/vehicle_assist
+SUPERADMIN_USERNAME=admin@vehicle.com
+SUPERADMIN_PASSWORD=change-me
+JWT_SECRET=change-me
 ```
 
-### 3. Run Server
+## Local Development
+
 ```bash
+npm install
 npm run dev
 ```
-*(The SQLite database file `database.sqlite` will be automatically generated and seeded on the first run).*
 
----
+The server starts on `http://localhost:5000` by default and exposes the API at `http://localhost:5000/api`.
 
-## ⚠️ Important Deployment Note (Vercel)
+On startup the app will:
 
-This repository includes a `vercel.json` and exports the Express app in `index.ts`, making it capable of running on Vercel as a Serverless Function. 
+- connect to PostgreSQL
+- run `sequelize.sync()`
+- seed default vehicle and service types
+- seed `Super Admin` and `Admin` roles
+- create the super admin account if it does not already exist
 
-**However, because Vercel is a Serverless environment, its filesystem is Read-Only and Ephemeral.**
-Since this backend uses a local filesystem database (`database.sqlite`), Vercel will **fail** when trying to perform `INSERT`, `UPDATE`, or `DELETE` operations (e.g., adding a mechanic or saving feedback). 
+## Scripts
 
-### Recommended Solution for Production:
-Before deploying this backend to production on Vercel, you must migrate the database from a local file to a cloud provider. 
-We strongly recommend:
-1. **Turso** (Cloud SQLite) - Requires minimal code changes as it uses `libsql`.
-2. **MongoDB Atlas** or **Supabase (PostgreSQL)**.
+- `npm run dev`: run the API with `nodemon`
+- `npm run build`: compile TypeScript to `dist/`
+- `npm run start`: start the compiled app in production-style mode
 
-If you choose to host on a traditional VPS (like DigitalOcean, AWS EC2, or Railway) instead of Vercel, the current local SQLite implementation will work perfectly.
+## Current Implementation Notes
+
+- The codebase now uses PostgreSQL through Sequelize. Older SQLite/Vercel notes are no longer accurate.
+- `src/config/database.ts` currently enables SSL options for every environment. If your local PostgreSQL instance does not support SSL, you will need to adjust that config.
+- For Windows local runs, `npm run start` may be less portable because the script sets `NODE_ENV=production` inline. Running `node dist/index.js` after `npm run build` is the safer fallback.

@@ -1,13 +1,14 @@
 import { Response } from 'express';
 import { Feedback, Donation } from '../models';
 import { AuthRequest } from '../middleware/authMiddleware';
+import { handleControllerError } from '../utils/controller';
 
 export const getFeedback = async (req: AuthRequest, res: Response) => {
   try {
     const feedback = await Feedback.findAll({ order: [['createdAt', 'DESC']] });
     res.json(feedback);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch feedback' });
+    handleControllerError(req, res, error, 'Failed to fetch feedback');
   }
 };
 
@@ -18,7 +19,7 @@ export const updateFeedback = async (req: AuthRequest, res: Response) => {
     await Feedback.update({ status }, { where: { id: feedbackId } });
     res.json({ message: 'Feedback updated successfully' });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update feedback' });
+    handleControllerError(req, res, error, 'Failed to update feedback');
   }
 };
 
@@ -28,7 +29,7 @@ export const deleteFeedback = async (req: AuthRequest, res: Response) => {
     await Feedback.destroy({ where: { id: feedbackId } });
     res.json({ message: 'Feedback deleted successfully' });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to delete feedback' });
+    handleControllerError(req, res, error, 'Failed to delete feedback');
   }
 };
 
@@ -37,6 +38,6 @@ export const getDonations = async (req: AuthRequest, res: Response) => {
     const donations = await Donation.findAll({ order: [['createdAt', 'DESC']] });
     res.json(donations);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch donations' });
+    handleControllerError(req, res, error, 'Failed to fetch donations');
   }
 };

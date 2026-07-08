@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import { User, Role } from '../models';
 import { AuthRequest } from '../middleware/authMiddleware';
+import { handleControllerError } from '../utils/controller';
 
 export const getProfile = async (req: AuthRequest, res: Response) => {
   try {
@@ -11,7 +12,7 @@ export const getProfile = async (req: AuthRequest, res: Response) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
     res.json(user);
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch profile' });
+    handleControllerError(req, res, err, 'Failed to fetch profile');
   }
 };
 
@@ -26,7 +27,7 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
     await User.update(updateData, { where: { id: req.user?.userId } });
     res.json({ message: 'Profile updated successfully' });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to update profile' });
+    handleControllerError(req, res, err, 'Failed to update profile');
   }
 };
 
@@ -45,7 +46,7 @@ export const getUsers = async (req: AuthRequest, res: Response) => {
     }));
     res.json(formattedUsers);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch users' });
+    handleControllerError(req, res, error, 'Failed to fetch users');
   }
 };
 
@@ -68,13 +69,12 @@ export const createUser = async (req: AuthRequest, res: Response) => {
     
     res.status(201).json({ message: 'Admin created successfully', user: newUser });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to create admin' });
+    handleControllerError(req, res, error, 'Failed to create admin');
   }
 };
 
 export const updateUser = async (req: AuthRequest, res: Response) => {
   try {
-    const { username, password } = req.body;
     const user = await User.findByPk(parseInt(req.params.id as string, 10));
     if (!user) return res.status(404).json({ error: 'User not found' });
     
@@ -90,7 +90,7 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
     await user.update(updateData);
     res.json({ message: 'Admin updated successfully' });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update admin' });
+    handleControllerError(req, res, error, 'Failed to update admin');
   }
 };
 
@@ -106,6 +106,6 @@ export const deleteUser = async (req: AuthRequest, res: Response) => {
     await user.destroy();
     res.json({ message: 'Admin deleted successfully' });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to delete admin' });
+    handleControllerError(req, res, error, 'Failed to delete admin');
   }
 };
