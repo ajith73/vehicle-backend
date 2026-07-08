@@ -52,15 +52,13 @@ export const bulkCreateMechanics = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Invalid payload. Expected array of mechanics.' });
     }
 
-    const createdMechanics = [];
-    for (const mechanicData of mechanics) {
-      const mechanic = await Mechanic.create({
-        ...mechanicData,
-        status: 'Pending',
-        createdById: req.user?.userId
-      });
-      createdMechanics.push(mechanic);
-    }
+    const mechanicsPayload = mechanics.map((mechanicData: any) => ({
+      ...mechanicData,
+      status: 'Pending',
+      createdById: req.user?.userId
+    }));
+
+    const createdMechanics = await Mechanic.bulkCreate(mechanicsPayload);
 
     await ActivityLog.create({
       userId: req.user?.userId,
@@ -69,8 +67,9 @@ export const bulkCreateMechanics = async (req: AuthRequest, res: Response) => {
     });
 
     res.status(201).json({ message: 'Bulk upload successful', count: createdMechanics.length });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to bulk create mechanics' });
+  } catch (error: any) {
+    console.error('Bulk Create Error:', error);
+    res.status(500).json({ error: 'Failed to bulk create mechanics: ' + (error.message || error) });
   }
 };
 
@@ -104,6 +103,27 @@ export const updateMechanic = async (req: AuthRequest, res: Response) => {
     }
   } catch (error) {
     res.status(500).json({ error: 'Failed to update mechanic' });
+  }
+};
+
+export const bulkUpdateMechanicsStatus = async (req: AuthRequest, res: Response) => {
+  try {
+    const { ids, status } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0 || !status) {
+      return res.status(400).json({ error: 'Invalid payload' });
+    }
+    
+    await Mechanic.update({ status, approvedById: status === 'Approved' ? req.user?.userId : null }, { where: { id: ids } });
+    
+    await ActivityLog.create({
+      userId: req.user?.userId,
+      action: 'Bulk Updated Mechanics',
+      details: `Super Admin updated ${ids.length} mechanics to status ${status}.`
+    });
+
+    res.json({ message: 'Mechanics updated successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to bulk update mechanics' });
   }
 };
 

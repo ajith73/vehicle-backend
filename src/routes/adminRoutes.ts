@@ -30,6 +30,7 @@ adminRoutes.get('/mechanics', mechanicController.getMechanics as any);
 adminRoutes.get('/mechanics/:id', mechanicController.getMechanicById as any);
 adminRoutes.post('/mechanics', mechanicController.createMechanic as any);
 adminRoutes.post('/mechanics/bulk', mechanicController.bulkCreateMechanics as any);
+adminRoutes.put('/mechanics/bulk/status', superAdminOnly, mechanicController.bulkUpdateMechanicsStatus as any);
 adminRoutes.put('/mechanics/:id', mechanicController.updateMechanic as any);
 adminRoutes.delete('/mechanics/:id', superAdminOnly, mechanicController.deleteMechanic as any);
 adminRoutes.post('/mechanics/:id/approve', superAdminOnly, mechanicController.approveMechanic as any);

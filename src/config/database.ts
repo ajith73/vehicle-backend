@@ -2,10 +2,11 @@ import { Sequelize } from 'sequelize';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const databaseUrl = process.env.DATABASE_URL;
+const isProduction = process.env.NODE_ENV === 'production';
+const databaseUrl = isProduction ? process.env.DATABASE_URL_PROD : process.env.DATABASE_URL_LOCAL;
 
 if (!databaseUrl) {
-  console.warn("WARNING: DATABASE_URL is not set in environment variables. Please configure it to connect to Supabase.");
+  console.warn(`WARNING: ${isProduction ? 'DATABASE_URL_PROD' : 'DATABASE_URL_LOCAL'} is not set in environment variables.`);
 }
 
 export const sequelize = new Sequelize(databaseUrl || '', {
