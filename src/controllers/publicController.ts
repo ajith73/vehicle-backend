@@ -176,22 +176,22 @@ export const submitMechanicRegistration = async (req: Request, res: Response) =>
       });
     }
 
-    const mechanic = await Mechanic.create({
-      ...normalizedData,
-      status: 'Pending',
-      createdById: null,
-      approvedById: null
+    const request = await MechanicUpdateRequest.create({
+      mechanicId: null,
+      updatedData: normalizedData,
+      status: 'Pending Update Approval',
+      requestedById: null
     });
 
     await ActivityLog.create({
       userId: null,
-      action: 'Public Mechanic Registration',
-      details: `Public mechanic registration submitted for ${mechanic.dataValues.businessName || mechanic.dataValues.name}.`
+      action: 'Public Mechanic Registration Request',
+      details: `Public new mechanic request submitted for ${normalizedData.businessName || normalizedData.name}.`
     });
 
     return res.status(201).json({
-      message: 'Mechanic registration submitted for Super Admin review',
-      mechanic
+      message: 'Mechanic request submitted for Super Admin review',
+      request
     });
   } catch (error) {
     handleControllerError(req, res, error, 'Failed to submit mechanic request');

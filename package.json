@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon src/index.ts",
+    "dev": "nodemon --watch src --ext ts --exec ts-node src/index.ts",
     "build": "tsc",
+    "prestart": "npm run build",
     "start": "node scripts/start.js",
     "migrate": "ts-node src/scripts/migrate.ts",
     "db:drop": "ts-node src/scripts/dropDatabase.ts"

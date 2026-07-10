@@ -1,6 +1,30 @@
 import { Request, Response } from 'express';
+import { col, fn, where as sqlWhere } from 'sequelize';
+import { ValidationError } from '../errors/AppError';
 import { VehicleType, ServiceType } from '../models';
 import { handleControllerError } from '../utils/controller';
+
+const normalizeName = (value: unknown) => String(value || '').trim();
+
+const findVehicleByName = async (name: string, excludeId?: string) => {
+  const existing = await VehicleType.findOne({
+    where: sqlWhere(fn('LOWER', col('name')), name.toLowerCase())
+  });
+
+  if (!existing) return null;
+  if (excludeId && String(existing.get('id')) === excludeId) return null;
+  return existing;
+};
+
+const findServiceByName = async (name: string, excludeId?: string) => {
+  const existing = await ServiceType.findOne({
+    where: sqlWhere(fn('LOWER', col('name')), name.toLowerCase())
+  });
+
+  if (!existing) return null;
+  if (excludeId && String(existing.get('id')) === excludeId) return null;
+  return existing;
+};
 
 // Public endpoints
 export const getVehicles = async (req: Request, res: Response) => {
@@ -24,10 +48,17 @@ export const getServices = async (req: Request, res: Response) => {
 // Admin endpoints
 export const addVehicle = async (req: Request, res: Response) => {
   try {
-    const { name } = req.body;
+    const name = normalizeName(req.body.name);
+    const duplicate = await findVehicleByName(name);
+    if (duplicate) {
+      throw new ValidationError(`Vehicle type "${name}" already exists`);
+    }
     const vehicle = await VehicleType.create({ name });
     res.status(201).json(vehicle);
   } catch (error) {
+    if (error instanceof ValidationError) {
+      return handleControllerError(req, res, error, error.message, error.statusCode);
+    }
     handleControllerError(req, res, error, 'Failed to create vehicle type');
   }
 };
@@ -44,21 +75,35 @@ export const deleteVehicle = async (req: Request, res: Response) => {
 
 export const updateVehicle = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
-    const { name } = req.body;
+    const id = String(req.params.id || '');
+    const name = normalizeName(req.body.name);
+    const duplicate = await findVehicleByName(name, id);
+    if (duplicate) {
+      throw new ValidationError(`Vehicle type "${name}" already exists`);
+    }
     await VehicleType.update({ name }, { where: { id } });
     res.json({ message: 'Updated successfully' });
   } catch (error) {
+    if (error instanceof ValidationError) {
+      return handleControllerError(req, res, error, error.message, error.statusCode);
+    }
     handleControllerError(req, res, error, 'Failed to update vehicle type');
   }
 };
 
 export const addService = async (req: Request, res: Response) => {
   try {
-    const { name } = req.body;
+    const name = normalizeName(req.body.name);
+    const duplicate = await findServiceByName(name);
+    if (duplicate) {
+      throw new ValidationError(`Service type "${name}" already exists`);
+    }
     const service = await ServiceType.create({ name });
     res.status(201).json(service);
   } catch (error) {
+    if (error instanceof ValidationError) {
+      return handleControllerError(req, res, error, error.message, error.statusCode);
+    }
     handleControllerError(req, res, error, 'Failed to create service type');
   }
 };
@@ -75,11 +120,18 @@ export const deleteService = async (req: Request, res: Response) => {
 
 export const updateService = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
-    const { name } = req.body;
+    const id = String(req.params.id || '');
+    const name = normalizeName(req.body.name);
+    const duplicate = await findServiceByName(name, id);
+    if (duplicate) {
+      throw new ValidationError(`Service type "${name}" already exists`);
+    }
     await ServiceType.update({ name }, { where: { id } });
     res.json({ message: 'Updated successfully' });
   } catch (error) {
+    if (error instanceof ValidationError) {
+      return handleControllerError(req, res, error, error.message, error.statusCode);
+    }
     handleControllerError(req, res, error, 'Failed to update service type');
   }
 };

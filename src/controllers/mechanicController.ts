@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import { Op, col, fn, where as sqlWhere } from 'sequelize';
 import { Mechanic, MechanicUpdateRequest, ActivityLog, User } from '../models';
 import { AuthRequest } from '../middleware/authMiddleware';
 import { handleControllerError } from '../utils/controller';
@@ -24,13 +25,125 @@ export const getMechanicById = async (req: AuthRequest, res: Response) => {
   }
 };
 
+const normalizeText = (value: unknown) => {
+  if (typeof value !== 'string') return '';
+  return value.trim().toLowerCase();
+};
+
+const normalizePhoneNumbers = (phoneList: unknown) => {
+  if (!Array.isArray(phoneList)) return [] as string[];
+  return phoneList
+    .map((phone: any) => String(phone?.number || '').replace(/\D/g, ''))
+    .filter(Boolean)
+    .sort();
+};
+
+const normalizeEmails = (emails: unknown) => {
+  if (!Array.isArray(emails)) return [] as string[];
+  return emails
+    .map((email) => normalizeText(email))
+    .filter(Boolean)
+    .sort();
+};
+
+const buildMechanicDuplicateSignature = (data: any) => {
+  const signature = {
+    businessName: normalizeText(data.businessName || data.name),
+    mechanicName: normalizeText(data.mechanicName),
+    city: normalizeText(data.city),
+    phones: normalizePhoneNumbers(data.phone),
+    emails: normalizeEmails(data.emails),
+  };
+
+  if (!signature.businessName && !signature.mechanicName && !signature.city && signature.phones.length === 0 && signature.emails.length === 0) {
+    return null;
+  }
+
+  return JSON.stringify(signature);
+};
+
+const findDuplicateMechanic = async (data: any, excludeId?: number) => {
+  const normalizedBusinessName = normalizeText(data.businessName || data.name);
+  const normalizedMechanicName = normalizeText(data.mechanicName);
+  const normalizedCity = normalizeText(data.city);
+  const newPhones = normalizePhoneNumbers(data.phone);
+  const newEmails = normalizeEmails(data.emails);
+
+  if (!normalizedBusinessName && !normalizedMechanicName && !normalizedCity && newPhones.length === 0 && newEmails.length === 0) {
+    return null;
+  }
+
+  const where: any = {};
+  const orClauses: any[] = [];
+
+  if (normalizedBusinessName) {
+    orClauses.push(sqlWhere(fn('LOWER', col('businessName')), normalizedBusinessName));
+    orClauses.push(sqlWhere(fn('LOWER', col('name')), normalizedBusinessName));
+  }
+  if (normalizedMechanicName) {
+    orClauses.push(sqlWhere(fn('LOWER', col('mechanicName')), normalizedMechanicName));
+  }
+  if (normalizedCity) {
+    orClauses.push(sqlWhere(fn('LOWER', col('city')), normalizedCity));
+  }
+
+  if (orClauses.length > 0) {
+    where[Op.or] = orClauses;
+  }
+
+  if (excludeId) {
+    where.id = { [Op.ne]: excludeId };
+  }
+
+  const existingMechanics = await Mechanic.findAll({ where });
+
+  for (const mechanic of existingMechanics) {
+    const existingBusinessName = normalizeText(mechanic.dataValues.businessName || mechanic.dataValues.name);
+    const existingMechanicName = normalizeText(mechanic.dataValues.mechanicName);
+    const existingCity = normalizeText(mechanic.dataValues.city);
+
+    const businessNameMatches = normalizedBusinessName ? existingBusinessName === normalizedBusinessName : true;
+    const mechanicNameMatches = normalizedMechanicName ? existingMechanicName === normalizedMechanicName : true;
+    const cityMatches = normalizedCity ? existingCity === normalizedCity : true;
+
+    const existingPhones = normalizePhoneNumbers(mechanic.dataValues.phone);
+    const phoneMatches = newPhones.length > 0 && existingPhones.length > 0 
+      ? newPhones.some((p: string) => existingPhones.includes(p))
+      : (newPhones.length === 0 && existingPhones.length === 0);
+
+    const existingEmails = normalizeEmails(mechanic.dataValues.emails);
+    const emailMatches = newEmails.length > 0 && existingEmails.length > 0
+      ? newEmails.some((e: string) => existingEmails.includes(e))
+      : (newEmails.length === 0 && existingEmails.length === 0);
+
+    if (businessNameMatches && mechanicNameMatches && cityMatches && phoneMatches && emailMatches) {
+      return mechanic;
+    }
+  }
+  return null;
+};
+
+const isDuplicateMechanic = async (data: any, excludeId?: number) => {
+  const existingMechanic = await findDuplicateMechanic(data, excludeId);
+  return Boolean(existingMechanic);
+};
+
 export const createMechanic = async (req: AuthRequest, res: Response) => {
   try {
     const mechanicData = req.body;
+
+    const isDuplicate = await isDuplicateMechanic(mechanicData);
+    if (isDuplicate) {
+      return res.status(409).json({ error: 'A mechanic with this exact Business Name, Mechanic Name, Phone, Email, and City already exists.' });
+    }
+
+    const role = req.user?.role;
+    const initialStatus = role === 'Super Admin' ? 'Approved' : 'Pending';
+
     const mechanic = await Mechanic.create({
       ...mechanicData,
       name: mechanicData.businessName || mechanicData.name, // Ensure name is populated as fallback
-      status: 'Pending',
+      status: initialStatus,
       createdById: req.user?.userId
     });
 
@@ -40,7 +153,10 @@ export const createMechanic = async (req: AuthRequest, res: Response) => {
       details: `Mechanic ${mechanic.dataValues.businessName || mechanic.dataValues.name} created and pending approval.`
     });
 
-    res.status(201).json(mechanic);
+    res.status(201).json({ 
+      ...mechanic.toJSON(), 
+      message: role === 'Super Admin' ? 'Mechanic created successfully' : 'Mechanic creation pending approval' 
+    });
   } catch (error) {
     handleControllerError(req, res, error, 'Failed to create mechanic');
   }
@@ -49,22 +165,78 @@ export const createMechanic = async (req: AuthRequest, res: Response) => {
 export const bulkCreateMechanics = async (req: AuthRequest, res: Response) => {
   try {
     const mechanics = req.body.mechanics;
+    const role = req.user?.role;
+    const initialStatus = role === 'Super Admin' ? 'Approved' : 'Pending';
+    const mechanicsPayload = [];
+    const duplicates: Array<{ index: number; businessName: string; reason: string }> = [];
+    const seenSignatures = new Set<string>();
 
-    const mechanicsPayload = mechanics.map((mechanicData: any) => ({
-      ...mechanicData,
-      status: 'Pending',
-      createdById: req.user?.userId
-    }));
+    for (let index = 0; index < mechanics.length; index += 1) {
+      const mechanicData = mechanics[index];
+      const duplicateSignature = buildMechanicDuplicateSignature(mechanicData);
 
-    const createdMechanics = await Mechanic.bulkCreate(mechanicsPayload);
+      if (duplicateSignature && seenSignatures.has(duplicateSignature)) {
+        duplicates.push({
+          index,
+          businessName: mechanicData.businessName || mechanicData.name || mechanicData.mechanicName || `Row ${index + 1}`,
+          reason: 'Duplicate record within this upload file'
+        });
+        continue;
+      }
 
-    await ActivityLog.create({
-      userId: req.user?.userId,
-      action: 'Bulk Created Mechanics',
-      details: `${createdMechanics.length} mechanics created and pending approval.`
+      const existingMechanic = await findDuplicateMechanic(mechanicData);
+      if (existingMechanic) {
+        duplicates.push({
+          index,
+          businessName: mechanicData.businessName || mechanicData.name || mechanicData.mechanicName || `Row ${index + 1}`,
+          reason: 'A matching mechanic already exists'
+        });
+        continue;
+      }
+
+      if (duplicateSignature) {
+        seenSignatures.add(duplicateSignature);
+      }
+
+      mechanicsPayload.push({
+        ...mechanicData,
+        name: mechanicData.businessName || mechanicData.name,
+        status: initialStatus,
+        createdById: req.user?.userId
+      });
+    }
+
+    const createdMechanics = mechanicsPayload.length > 0 ? await Mechanic.bulkCreate(mechanicsPayload) : [];
+
+    if (createdMechanics.length > 0) {
+      await ActivityLog.create({
+        userId: req.user?.userId,
+        action: 'Bulk Created Mechanics',
+        details: `${createdMechanics.length} mechanics created${duplicates.length > 0 ? `, ${duplicates.length} duplicates skipped` : ''}.`
+      });
+    }
+
+    const createdCount = createdMechanics.length;
+    const duplicateCount = duplicates.length;
+    const message = createdCount > 0
+      ? role === 'Super Admin'
+        ? duplicateCount > 0
+          ? `Saved ${createdCount} mechanic(s). Skipped ${duplicateCount} duplicate row(s).`
+          : 'Bulk upload successful!'
+        : duplicateCount > 0
+          ? `Submitted ${createdCount} mechanic(s). Skipped ${duplicateCount} duplicate row(s).`
+          : 'Bulk upload submitted as pending request'
+      : duplicateCount > 0
+        ? 'No mechanics were saved because all selected rows were duplicates.'
+        : 'No mechanics were saved.';
+
+    res.status(createdCount > 0 ? 201 : 200).json({
+      message,
+      count: createdCount,
+      createdCount,
+      duplicateCount,
+      duplicates
     });
-
-    res.status(201).json({ message: 'Bulk upload successful', count: createdMechanics.length });
   } catch (error: any) {
     handleControllerError(req, res, error, 'Failed to bulk create mechanics');
   }
@@ -75,6 +247,11 @@ export const updateMechanic = async (req: AuthRequest, res: Response) => {
     const mechanicId = parseInt(req.params.id as string, 10);
     const updateData = req.body;
     const role = req.user?.role;
+
+    const isDuplicate = await isDuplicateMechanic(updateData, mechanicId);
+    if (isDuplicate) {
+      return res.status(409).json({ error: 'Update failed: A mechanic with these identical details already exists.' });
+    }
 
     if (role === 'Super Admin') {
       await Mechanic.update(updateData, { where: { id: mechanicId } });
@@ -165,7 +342,26 @@ export const getUpdateRequests = async (req: AuthRequest, res: Response) => {
         { model: User, as: 'Requestor', attributes: ['username'] }
       ]
     });
-    res.json(requests);
+    const serializedRequests = requests.map((request) => {
+      const requestJson = request.toJSON() as any;
+      const updatedData = requestJson.updatedData && typeof requestJson.updatedData === 'object' ? requestJson.updatedData : {};
+      const requesterDisplayName =
+        requestJson.Requestor?.username ||
+        updatedData.mechanicName ||
+        updatedData.businessName ||
+        updatedData.name ||
+        requestJson.Mechanic?.mechanicName ||
+        requestJson.Mechanic?.businessName ||
+        requestJson.Mechanic?.name ||
+        'Public User';
+
+      return {
+        ...requestJson,
+        requesterDisplayName
+      };
+    });
+
+    res.json(serializedRequests);
   } catch (error) {
     handleControllerError(req, res, error, 'Failed to fetch update requests');
   }
@@ -179,17 +375,29 @@ export const approveUpdateRequest = async (req: AuthRequest, res: Response) => {
     if (!request) return res.status(404).json({ error: 'Request not found' });
     if (request.dataValues.status !== 'Pending Update Approval') return res.status(400).json({ error: 'Request already processed' });
 
-    await Mechanic.update(request.dataValues.updatedData, { where: { id: request.dataValues.mechanicId } });
+    if (request.dataValues.mechanicId) {
+      await Mechanic.update(request.dataValues.updatedData, { where: { id: request.dataValues.mechanicId } });
+    } else {
+      await Mechanic.create({
+        ...request.dataValues.updatedData,
+        name: request.dataValues.updatedData?.businessName || request.dataValues.updatedData?.name,
+        status: 'Approved',
+        createdById: null,
+        approvedById: req.user?.userId
+      });
+    }
     
     await request.update({ status: 'Approved', reviewedById: req.user?.userId });
 
     await ActivityLog.create({
       userId: req.user?.userId,
       action: 'Approved Update Request',
-      details: `Update request ${requestId} approved and applied to mechanic ID ${request.dataValues.mechanicId}.`
+      details: request.dataValues.mechanicId
+        ? `Update request ${requestId} approved and applied to mechanic ID ${request.dataValues.mechanicId}.`
+        : `New mechanic request ${requestId} approved and created as a live mechanic record.`
     });
 
-    res.json({ message: 'Update applied successfully' });
+    res.json({ message: request.dataValues.mechanicId ? 'Update applied successfully' : 'Mechanic created successfully from request' });
   } catch (error) {
     handleControllerError(req, res, error, 'Failed to approve update request');
   }
@@ -206,5 +414,26 @@ export const rejectUpdateRequest = async (req: AuthRequest, res: Response) => {
     res.json({ message: 'Update request rejected' });
   } catch (error) {
     handleControllerError(req, res, error, 'Failed to reject update request');
+  }
+};
+
+export const deleteUpdateRequest = async (req: AuthRequest, res: Response) => {
+  try {
+    const requestId = parseInt(req.params.id as string, 10);
+    const request = await MechanicUpdateRequest.findByPk(requestId);
+    
+    if (!request) return res.status(404).json({ error: 'Request not found' });
+    
+    await request.destroy();
+
+    await ActivityLog.create({
+      userId: req.user?.userId,
+      action: 'Deleted Update Request',
+      details: `Super Admin deleted update request ID ${requestId}.`
+    });
+
+    res.json({ message: 'Update request deleted successfully' });
+  } catch (error) {
+    handleControllerError(req, res, error, 'Failed to delete update request');
   }
 };

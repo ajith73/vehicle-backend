@@ -37,8 +37,8 @@ const mechanicPayloadShape = {
   phone: arrayField(phoneSchema, { minLength: 1 }),
   emails: optional(arrayField(stringField({ minLength: 3 }))),
   address: stringField({ minLength: 1 }),
-  landmark: optional(stringField()),
-  area: stringField({ minLength: 1 }),
+  landmark: optional(stringField({ minLength: 1 })),
+  pincode: optional(stringField()),
   city: stringField({ minLength: 1 }),
   state: stringField({ minLength: 1 }),
   country: optional(stringField({ minLength: 1 })),
@@ -83,18 +83,21 @@ export const routeRequestSchema = objectField({
 
 export const profileUpdateSchema = objectField({
   username: optional(stringField({ minLength: 1 })),
+  name: optional(stringField({ minLength: 1 })),
   email: optional(stringField({ minLength: 3 })),
   password: optional(stringField({ minLength: 6 }))
 }, { requireAtLeastOne: true });
 
 export const createUserSchema = objectField({
   username: stringField({ minLength: 1 }),
+  name: optional(stringField({ minLength: 1 })),
   password: stringField({ minLength: 6 }),
   allowedScreens: optional(arrayField(stringField({ minLength: 1 })))
 });
 
 export const updateUserSchema = objectField({
   username: optional(stringField({ minLength: 1 })),
+  name: optional(stringField({ minLength: 1 })),
   password: optional(stringField({ minLength: 6 })),
   allowedScreens: optional(arrayField(stringField({ minLength: 1 })))
 }, { requireAtLeastOne: true });

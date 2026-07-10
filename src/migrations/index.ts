@@ -201,4 +201,54 @@ const initialSchemaMigration: Migration = {
   }
 };
 
-export const migrations: Migration[] = [initialSchemaMigration];
+const addPincodeMigration: Migration = {
+  name: '002-add-pincode',
+  up: async (queryInterface) => {
+    const tableDesc = await queryInterface.describeTable('Mechanics');
+    if (!tableDesc.pincode) {
+      await queryInterface.addColumn('Mechanics', 'pincode', {
+        type: DataTypes.STRING,
+        allowNull: true,
+      });
+    }
+    if (tableDesc.area) {
+      await queryInterface.removeColumn('Mechanics', 'area');
+    }
+  }
+};
+
+const addUserNameMigration: Migration = {
+  name: '003-add-user-name',
+  up: async (queryInterface) => {
+    const tableDesc = await queryInterface.describeTable('Users');
+    if (!tableDesc.name) {
+      await queryInterface.addColumn('Users', 'name', {
+        type: DataTypes.STRING,
+        allowNull: true,
+      });
+    }
+  }
+};
+
+const allowNullMechanicIdOnUpdateRequestsMigration: Migration = {
+  name: '004-allow-null-mechanic-update-request-mechanic-id',
+  up: async (queryInterface) => {
+    const tableDesc = await queryInterface.describeTable('MechanicUpdateRequests');
+    if (tableDesc.mechanicId?.allowNull === false) {
+      await queryInterface.changeColumn('MechanicUpdateRequests', 'mechanicId', {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: { model: 'Mechanics', key: 'id' },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE'
+      });
+    }
+  }
+};
+
+export const migrations: Migration[] = [
+  initialSchemaMigration,
+  addPincodeMigration,
+  addUserNameMigration,
+  allowNullMechanicIdOnUpdateRequestsMigration
+];

@@ -7,7 +7,7 @@ import { handleControllerError } from '../utils/controller';
 export const getProfile = async (req: AuthRequest, res: Response) => {
   try {
     const user = await User.findByPk(req.user?.userId, {
-      attributes: ['id', 'username', 'email', 'roleId', 'allowedScreens']
+      attributes: ['id', 'username', 'name', 'email', 'roleId', 'allowedScreens']
     });
     if (!user) return res.status(404).json({ error: 'User not found' });
     res.json(user);
@@ -18,9 +18,10 @@ export const getProfile = async (req: AuthRequest, res: Response) => {
 
 export const updateProfile = async (req: AuthRequest, res: Response) => {
   try {
-    const { username, email, password } = req.body;
+    const { username, name, email, password } = req.body;
     const updateData: any = {};
     if (username) updateData.username = username;
+    if (name) updateData.name = name;
     if (email) updateData.email = email;
     if (password) updateData.passwordHash = await bcrypt.hash(password, 10);
 
@@ -40,6 +41,8 @@ export const getUsers = async (req: AuthRequest, res: Response) => {
     const formattedUsers = users.map(u => ({
       id: u.dataValues.id,
       username: u.dataValues.username,
+      name: u.dataValues.name,
+      email: u.dataValues.email || u.dataValues.username,
       role: (u as any).Role?.name || 'Unknown',
       allowedScreens: u.dataValues.allowedScreens || [],
       createdAt: u.dataValues.createdAt
@@ -52,7 +55,7 @@ export const getUsers = async (req: AuthRequest, res: Response) => {
 
 export const createUser = async (req: AuthRequest, res: Response) => {
   try {
-    const { username, password } = req.body;
+    const { username, name, password } = req.body;
     const existing = await User.findOne({ where: { username } });
     if (existing) return res.status(400).json({ error: 'Username already exists' });
     
@@ -62,6 +65,8 @@ export const createUser = async (req: AuthRequest, res: Response) => {
     const passwordHash = await bcrypt.hash(password, 10);
     const newUser = await User.create({
       username,
+      name,
+      email: username,
       passwordHash,
       roleId: adminRole.dataValues.id,
       allowedScreens: req.body.allowedScreens || []
@@ -84,6 +89,8 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
 
     const updateData: any = {};
     if (req.body.username) updateData.username = req.body.username;
+    if (req.body.name) updateData.name = req.body.name;
+    if (req.body.username) updateData.email = req.body.username;
     if (req.body.password) updateData.passwordHash = await bcrypt.hash(req.body.password, 10);
     if (req.body.allowedScreens) updateData.allowedScreens = req.body.allowedScreens;
 

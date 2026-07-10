@@ -27,7 +27,7 @@ Mechanic.init(
     longitude: { type: DataTypes.FLOAT, allowNull: false },
     address: { type: DataTypes.STRING, allowNull: false },
     landmark: { type: DataTypes.STRING, allowNull: true },
-    area: { type: DataTypes.STRING, allowNull: true },
+    pincode: { type: DataTypes.STRING, allowNull: true },
     city: { type: DataTypes.STRING, allowNull: true },
     state: { type: DataTypes.STRING, allowNull: true },
     country: { type: DataTypes.STRING, allowNull: true },
