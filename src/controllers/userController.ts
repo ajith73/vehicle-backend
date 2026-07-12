@@ -7,10 +7,16 @@ import { handleControllerError } from '../utils/controller';
 export const getProfile = async (req: AuthRequest, res: Response) => {
   try {
     const user = await User.findByPk(req.user?.userId, {
-      attributes: ['id', 'username', 'name', 'email', 'roleId', 'allowedScreens']
+      attributes: ['id', 'name', 'email', 'roleId', 'allowedScreens'],
+      include: [{ model: Role }]
     });
     if (!user) return res.status(404).json({ error: 'User not found' });
-    res.json(user);
+    
+    const roleName = (user as any).Role?.name || 'Unknown';
+    res.json({
+      ...user.dataValues,
+      role: roleName
+    });
   } catch (err) {
     handleControllerError(req, res, err, 'Failed to fetch profile');
   }
@@ -18,9 +24,8 @@ export const getProfile = async (req: AuthRequest, res: Response) => {
 
 export const updateProfile = async (req: AuthRequest, res: Response) => {
   try {
-    const { username, name, email, password } = req.body;
+    const { name, email, password } = req.body;
     const updateData: any = {};
-    if (username) updateData.username = username;
     if (name) updateData.name = name;
     if (email) updateData.email = email;
     if (password) updateData.passwordHash = await bcrypt.hash(password, 10);
@@ -40,9 +45,8 @@ export const getUsers = async (req: AuthRequest, res: Response) => {
     });
     const formattedUsers = users.map(u => ({
       id: u.dataValues.id,
-      username: u.dataValues.username,
       name: u.dataValues.name,
-      email: u.dataValues.email || u.dataValues.username,
+      email: u.dataValues.email,
       role: (u as any).Role?.name || 'Unknown',
       allowedScreens: u.dataValues.allowedScreens || [],
       createdAt: u.dataValues.createdAt
@@ -55,18 +59,17 @@ export const getUsers = async (req: AuthRequest, res: Response) => {
 
 export const createUser = async (req: AuthRequest, res: Response) => {
   try {
-    const { username, name, password } = req.body;
-    const existing = await User.findOne({ where: { username } });
-    if (existing) return res.status(400).json({ error: 'Username already exists' });
+    const { email, name, password } = req.body;
+    const existing = await User.findOne({ where: { email } });
+    if (existing) return res.status(400).json({ error: 'Email already exists' });
     
     const adminRole = await Role.findOne({ where: { name: 'Admin' } });
     if (!adminRole) return res.status(500).json({ error: 'Admin role missing' });
     
     const passwordHash = await bcrypt.hash(password, 10);
     const newUser = await User.create({
-      username,
       name,
-      email: username,
+      email,
       passwordHash,
       roleId: adminRole.dataValues.id,
       allowedScreens: req.body.allowedScreens || []
@@ -83,14 +86,13 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
     const user = await User.findByPk(parseInt(req.params.id as string, 10));
     if (!user) return res.status(404).json({ error: 'User not found' });
     
-    if (user.dataValues.username === 'ajithoffice1999@gmail.com') {
+    if (user.dataValues.email === 'ajithoffice1999@gmail.com') {
       return res.status(403).json({ error: 'Cannot modify the root Super Admin account' });
     }
 
     const updateData: any = {};
-    if (req.body.username) updateData.username = req.body.username;
     if (req.body.name) updateData.name = req.body.name;
-    if (req.body.username) updateData.email = req.body.username;
+    if (req.body.email) updateData.email = req.body.email;
     if (req.body.password) updateData.passwordHash = await bcrypt.hash(req.body.password, 10);
     if (req.body.allowedScreens) updateData.allowedScreens = req.body.allowedScreens;
 
@@ -106,7 +108,7 @@ export const deleteUser = async (req: AuthRequest, res: Response) => {
     const user = await User.findByPk(parseInt(req.params.id as string, 10));
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    if (user.dataValues.username === 'ajithoffice1999@gmail.com') {
+    if (user.dataValues.email === 'ajithoffice1999@gmail.com') {
       return res.status(403).json({ error: 'Cannot delete the root Super Admin account' });
     }
 

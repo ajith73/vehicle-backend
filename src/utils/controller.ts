@@ -18,6 +18,7 @@ export const handleControllerError = (
 
   res.status(statusCode).json({
     error: clientMessage,
-    requestId: req.requestId
+    requestId: req.requestId,
+    actualError: error instanceof Error ? error.message : String(error)
   });
 };

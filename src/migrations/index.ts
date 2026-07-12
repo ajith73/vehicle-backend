@@ -49,8 +49,7 @@ const initialSchemaMigration: Migration = {
 
     await createTableIfMissing(queryInterface, 'Users', {
       id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true, allowNull: false },
-      username: { type: DataTypes.STRING, allowNull: false, unique: true },
-      email: { type: DataTypes.STRING, allowNull: true },
+      email: { type: DataTypes.STRING, allowNull: false, unique: true },
       passwordHash: { type: DataTypes.STRING, allowNull: false },
       refreshToken: { type: DataTypes.STRING, allowNull: true },
       allowedScreens: { type: DataTypes.JSON, allowNull: true, defaultValue: [] },

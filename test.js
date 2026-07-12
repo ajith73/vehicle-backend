@@ -1,0 +1,1 @@
+const { Sequelize } = require('sequelize'); const sequelize = new Sequelize('postgresql://postgres.txekknkpyffvpyajxvij:xMiookd9skVfXjb3@aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres'); sequelize.query('SELECT * FROM "Mechanics" LIMIT 1', { type: Sequelize.QueryTypes.SELECT }).then(res => { console.log(JSON.stringify(res, null, 2)); process.exit(0); });

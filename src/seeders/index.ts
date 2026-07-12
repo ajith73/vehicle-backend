@@ -48,18 +48,17 @@ export async function setupDatabase() {
     const [superAdminRole] = await Role.findOrCreate({ where: { name: 'Super Admin' } });
     const [adminRole] = await Role.findOrCreate({ where: { name: 'Admin' } });
 
-    const adminEmail = process.env.SUPERADMIN_USERNAME || 'admin@vehicle.com';
+    const adminEmail = process.env.SUPERADMIN_EMAIL || process.env.SUPERADMIN_USERNAME || 'admin@vehicle.com';
     const adminPassword = process.env.SUPERADMIN_PASSWORD || 'admin123';
 
-    if (!process.env.SUPERADMIN_USERNAME) {
-      logger.warn('superadmin_username_missing_using_default');
+    if (!process.env.SUPERADMIN_EMAIL && !process.env.SUPERADMIN_USERNAME) {
+      logger.warn('superadmin_email_missing_using_default');
     }
     
-    const superAdminExists = await User.findOne({ where: { username: adminEmail } });
+    const superAdminExists = await User.findOne({ where: { email: adminEmail } });
     if (!superAdminExists) {
       const passwordHash = await bcrypt.hash(adminPassword, 10);
       await User.create({
-        username: adminEmail,
         email: adminEmail,
         passwordHash,
         roleId: superAdminRole.dataValues.id,

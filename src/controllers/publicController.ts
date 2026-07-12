@@ -116,7 +116,11 @@ export const getRoute = async (req: Request, res: Response) => {
       durationMinutes: Math.round(bestRoute.duration / 60),
       routeCoords: bestRoute.geometry.coordinates.map((coord) => [coord[1], coord[0]])
     });
-  } catch (error) {
+  } catch (error: any) {
+    console.error('getRoute Error:', error);
+    if (error.cause?.code === 'ECONNREFUSED' || error.name === 'TypeError') {
+      return res.status(502).json({ error: 'Routing service is temporarily unavailable. Please try again later.', requestId: req.requestId });
+    }
     handleControllerError(req, res, error, 'Failed to fetch route');
   }
 };

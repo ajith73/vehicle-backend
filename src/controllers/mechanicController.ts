@@ -375,6 +375,11 @@ export const approveUpdateRequest = async (req: AuthRequest, res: Response) => {
     if (!request) return res.status(404).json({ error: 'Request not found' });
     if (request.dataValues.status !== 'Pending Update Approval') return res.status(400).json({ error: 'Request already processed' });
 
+    const isDuplicate = await isDuplicateMechanic(request.dataValues.updatedData || {}, request.dataValues.mechanicId);
+    if (isDuplicate) {
+      return res.status(409).json({ error: 'Cannot approve this request because a mechanic with these identical details already exists.' });
+    }
+
     if (request.dataValues.mechanicId) {
       await Mechanic.update(request.dataValues.updatedData, { where: { id: request.dataValues.mechanicId } });
     } else {
