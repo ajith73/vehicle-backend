@@ -70,7 +70,9 @@ export const feedbackSubmissionSchema = objectField({
 export const donationSubmissionSchema = objectField({
   amount: numberField({ coerce: true, min: 1 }),
   paymentReference: optional(stringField({ minLength: 1 })),
-  name: optional(stringField({ minLength: 1 }))
+  name: optional(stringField({ minLength: 1 })),
+  email: optional(stringField({ minLength: 1 })),
+  consentGiven: optional(booleanField())
 });
 
 export const routeRequestSchema = objectField({

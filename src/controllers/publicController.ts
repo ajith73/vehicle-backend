@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { Op, Sequelize } from 'sequelize';
 import { Mechanic, Feedback, Donation, ActivityLog, MechanicUpdateRequest } from '../models';
 import { handleControllerError } from '../utils/controller';
 
@@ -34,11 +35,39 @@ const parseFilterValues = (value: unknown) => {
 
 export const getMechanics = async (req: Request, res: Response) => {
   try {
-    const { vehicleType, serviceType, vehicle, service, search } = req.query;
+    const { vehicleType, serviceType, vehicle, service, search, lat, lng, radius, limit, page, sort, availability } = req.query;
     
-    const mechanics = await Mechanic.findAll({
-      where: { status: 'Approved' }
-    });
+    let mechanics;
+    
+    if (lat && lng) {
+      const parsedLat = parseFloat(lat as string);
+      const parsedLng = parseFloat(lng as string);
+      const parsedRadius = radius ? parseFloat(radius as string) : 50;
+
+      const haversine = `(
+        6371 * acos(
+          cos(radians(${parsedLat})) * cos(radians(latitude)) * cos(radians(longitude) - radians(${parsedLng})) +
+          sin(radians(${parsedLat})) * sin(radians(latitude))
+        )
+      )`;
+
+      let whereClause: any = { status: 'Approved' };
+      if (!search || (typeof search === 'string' && search.trim() === '')) {
+        whereClause[Op.and] = Sequelize.literal(`${haversine} <= ${parsedRadius}`);
+      }
+
+      mechanics = await Mechanic.findAll({
+        where: whereClause,
+        attributes: {
+          include: [[Sequelize.literal(haversine), 'dist']]
+        },
+        order: [[Sequelize.literal('dist'), 'ASC']]
+      });
+    } else {
+      mechanics = await Mechanic.findAll({
+        where: { status: 'Approved' }
+      });
+    }
     
     let filtered = mechanics.map(m => m.dataValues);
 
@@ -78,12 +107,32 @@ export const getMechanics = async (req: Request, res: Response) => {
       });
     }
 
-    res.json(
-      filtered.map((mechanic) => ({
-        ...mechanic,
-        currentStatus: getAvailabilityStatus(mechanic)
-      }))
-    );
+    let processed = filtered.map((mechanic) => ({
+      ...mechanic,
+      currentStatus: getAvailabilityStatus(mechanic)
+    }));
+
+    if (availability === 'Available') {
+      processed = processed.filter(m => m.currentStatus === 'Available');
+    } else if (availability === 'Not Available') {
+      processed = processed.filter(m => m.currentStatus !== 'Available');
+    }
+
+    if (sort === 'Available') {
+      processed.sort((a, b) => {
+        if (a.currentStatus === 'Available' && b.currentStatus !== 'Available') return -1;
+        if (a.currentStatus !== 'Available' && b.currentStatus === 'Available') return 1;
+        return 0; // Distance sort is preserved from DB
+      });
+    }
+
+    const parsedLimit = limit ? parseInt(limit as string, 10) : 50;
+    const parsedPage = page ? parseInt(page as string, 10) : 1;
+    const offset = (parsedPage - 1) * parsedLimit;
+    
+    const paginated = processed.slice(offset, offset + parsedLimit);
+
+    res.json(paginated);
   } catch (error: any) {
     handleControllerError(req, res, error, 'Failed to fetch mechanics');
   }
@@ -138,9 +187,9 @@ export const submitFeedback = async (req: Request, res: Response) => {
 
 export const submitDonation = async (req: Request, res: Response) => {
   try {
-    const { amount, paymentReference, name } = req.body;
+    const { amount, paymentReference, name, email, consentGiven } = req.body;
 
-    const donation = await Donation.create({ amount, paymentReference, name });
+    const donation = await Donation.create({ amount, paymentReference, name, email, consentGiven });
     res.status(201).json({ message: 'Donation recorded successfully', donation });
   } catch (error) {
     handleControllerError(req, res, error, 'Failed to record donation');

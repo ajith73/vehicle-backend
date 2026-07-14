@@ -76,6 +76,8 @@ const initialSchemaMigration: Migration = {
       amount: { type: DataTypes.FLOAT, allowNull: false },
       paymentReference: { type: DataTypes.STRING, allowNull: true },
       name: { type: DataTypes.STRING, allowNull: true },
+      email: { type: DataTypes.STRING, allowNull: true },
+      consentGiven: { type: DataTypes.BOOLEAN, defaultValue: false },
       ...timestamps
     });
 
@@ -245,9 +247,29 @@ const allowNullMechanicIdOnUpdateRequestsMigration: Migration = {
   }
 };
 
+const addDonationFieldsMigration: Migration = {
+  name: '005-add-donation-fields',
+  up: async (queryInterface) => {
+    const tableDesc = await queryInterface.describeTable('Donations');
+    if (!tableDesc.email) {
+      await queryInterface.addColumn('Donations', 'email', {
+        type: DataTypes.STRING,
+        allowNull: true,
+      });
+    }
+    if (!tableDesc.consentGiven) {
+      await queryInterface.addColumn('Donations', 'consentGiven', {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+      });
+    }
+  }
+};
+
 export const migrations: Migration[] = [
   initialSchemaMigration,
   addPincodeMigration,
   addUserNameMigration,
-  allowNullMechanicIdOnUpdateRequestsMigration
+  allowNullMechanicIdOnUpdateRequestsMigration,
+  addDonationFieldsMigration
 ];
