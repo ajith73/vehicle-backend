@@ -19,8 +19,20 @@ export const authenticate = (req: AuthRequest, res: Response, next: NextFunction
   const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: number; role: string };
-    req.user = decoded;
-    next();
+    
+    // Lazy-load User to avoid circular dependencies if any
+    const { User } = require('../models/User');
+    
+    User.findByPk(decoded.userId).then((user: any) => {
+      if (!user) {
+        return res.status(401).json({ error: 'Unauthorized: User does not exist or was deleted' });
+      }
+      req.user = decoded;
+      next();
+    }).catch((err: any) => {
+      console.error('Error verifying user in auth middleware:', err);
+      return res.status(500).json({ error: 'Internal Server Error' });
+    });
   } catch (error) {
     return res.status(401).json({ error: 'Unauthorized: Invalid token' });
   }

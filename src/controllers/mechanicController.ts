@@ -282,9 +282,9 @@ export const updateMechanic = async (req: AuthRequest, res: Response) => {
 
 export const bulkUpdateMechanicsStatus = async (req: AuthRequest, res: Response) => {
   try {
-    const { ids, status } = req.body;
+    const { ids, status, remarks } = req.body;
     
-    await Mechanic.update({ status, approvedById: status === 'Approved' ? req.user?.userId : null }, { where: { id: ids } });
+    await Mechanic.update({ status, remarks, approvedById: status === 'Approved' ? req.user?.userId : null }, { where: { id: ids } });
     
     await ActivityLog.create({
       userId: req.user?.userId,
@@ -336,7 +336,11 @@ export const approveMechanic = async (req: AuthRequest, res: Response) => {
 
 export const getUpdateRequests = async (req: AuthRequest, res: Response) => {
   try {
+    const role = req.user?.role;
+    const whereClause = role === 'Admin' ? { requestedById: req.user?.userId } : {};
+
     const requests = await MechanicUpdateRequest.findAll({
+      where: whereClause,
       include: [
         { model: Mechanic },
         { model: User, as: 'Requestor', attributes: ['username'] }
@@ -411,8 +415,10 @@ export const approveUpdateRequest = async (req: AuthRequest, res: Response) => {
 export const rejectUpdateRequest = async (req: AuthRequest, res: Response) => {
   try {
     const requestId = parseInt(req.params.id as string, 10);
+    const { remarks } = req.body;
+    
     await MechanicUpdateRequest.update(
-      { status: 'Rejected', reviewedById: req.user?.userId }, 
+      { status: 'Rejected', reviewedById: req.user?.userId, remarks }, 
       { where: { id: requestId } }
     );
 
@@ -440,5 +446,76 @@ export const deleteUpdateRequest = async (req: AuthRequest, res: Response) => {
     res.json({ message: 'Update request deleted successfully' });
   } catch (error) {
     handleControllerError(req, res, error, 'Failed to delete update request');
+  }
+};
+
+export const getUpdateRequestById = async (req: AuthRequest, res: Response) => {
+  try {
+    const requestId = parseInt(req.params.id as string, 10);
+    if (isNaN(requestId)) return res.status(400).json({ error: 'Invalid Request ID' });
+
+    const request = await MechanicUpdateRequest.findByPk(requestId, {
+      include: [
+        { model: Mechanic },
+        { model: User, as: 'Requestor', attributes: ['username'] }
+      ]
+    });
+
+    if (!request) return res.status(404).json({ error: 'Update request not found' });
+    
+    // Format similar to getUpdateRequests
+    const requestJson = request.toJSON() as any;
+    const updatedData = requestJson.updatedData && typeof requestJson.updatedData === 'object' ? requestJson.updatedData : {};
+    const requesterDisplayName =
+      requestJson.Requestor?.username ||
+      updatedData.mechanicName ||
+      updatedData.businessName ||
+      updatedData.name ||
+      requestJson.Mechanic?.mechanicName ||
+      requestJson.Mechanic?.businessName ||
+      requestJson.Mechanic?.name ||
+      'Public User';
+      
+    res.json({
+      ...requestJson,
+      requesterDisplayName
+    });
+  } catch (error) {
+    handleControllerError(req, res, error, 'Failed to fetch update request');
+  }
+};
+
+export const updateUpdateRequest = async (req: AuthRequest, res: Response) => {
+  try {
+    const requestId = parseInt(req.params.id as string, 10);
+    if (isNaN(requestId)) return res.status(400).json({ error: 'Invalid Request ID' });
+
+    const request = await MechanicUpdateRequest.findByPk(requestId);
+    if (!request) return res.status(404).json({ error: 'Update request not found' });
+
+    // Check ownership for normal admins
+    if (req.user?.role !== 'Super Admin' && request.getDataValue('requestedById') !== req.user?.userId) {
+      return res.status(403).json({ error: 'Forbidden: You can only edit your own update requests' });
+    }
+
+    // Update the data
+    request.set('updatedData', req.body);
+    
+    // If it was rejected, put it back to pending
+    if (request.getDataValue('status') === 'Rejected') {
+      request.set('status', 'Pending Update Approval');
+    }
+
+    await request.save();
+
+    await ActivityLog.create({
+      userId: req.user?.userId,
+      action: 'Modified Update Request',
+      details: `Admin modified update request ID ${requestId}.`
+    });
+
+    res.json({ message: 'Update request modified successfully' });
+  } catch (error) {
+    handleControllerError(req, res, error, 'Failed to modify update request');
   }
 };

@@ -69,6 +69,7 @@ export const createUser = async (req: AuthRequest, res: Response) => {
     const passwordHash = await bcrypt.hash(password, 10);
     const newUser = await User.create({
       name,
+      username: email,
       email,
       passwordHash,
       roleId: adminRole.dataValues.id,

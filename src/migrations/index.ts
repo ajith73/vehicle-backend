@@ -266,10 +266,52 @@ const addDonationFieldsMigration: Migration = {
   }
 };
 
+const addMechanicRemarksMigration: Migration = {
+  name: '006-add-mechanic-remarks',
+  up: async (queryInterface) => {
+    const tableDesc = await queryInterface.describeTable('Mechanics');
+    if (!tableDesc.remarks) {
+      await queryInterface.addColumn('Mechanics', 'remarks', {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      });
+    }
+  }
+};
+
+const addMechanicUpdateRequestRemarksMigration: Migration = {
+  name: '007-add-mechanic-update-request-remarks',
+  up: async (queryInterface) => {
+    const tableDesc = await queryInterface.describeTable('MechanicUpdateRequests');
+    if (!tableDesc.remarks) {
+      await queryInterface.addColumn('MechanicUpdateRequests', 'remarks', {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      });
+    }
+  }
+};
+
+const addUserDeletedAtMigration: Migration = {
+  name: '008-add-user-deleted-at',
+  up: async (queryInterface) => {
+    const tableDesc = await queryInterface.describeTable('Users');
+    if (!tableDesc.deletedAt) {
+      await queryInterface.addColumn('Users', 'deletedAt', {
+        type: DataTypes.DATE,
+        allowNull: true,
+      });
+    }
+  }
+};
+
 export const migrations: Migration[] = [
   initialSchemaMigration,
   addPincodeMigration,
   addUserNameMigration,
   allowNullMechanicIdOnUpdateRequestsMigration,
-  addDonationFieldsMigration
+  addDonationFieldsMigration,
+  addMechanicRemarksMigration,
+  addMechanicUpdateRequestRemarksMigration,
+  addUserDeletedAtMigration
 ];

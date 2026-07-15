@@ -41,6 +41,7 @@ Mechanic.init(
       type: DataTypes.ENUM('Pending', 'Approved', 'Rejected', 'Inactive'),
       defaultValue: 'Pending',
     },
+    remarks: { type: DataTypes.TEXT, allowNull: true },
   },
   { sequelize, modelName: 'Mechanic' }
 );

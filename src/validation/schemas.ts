@@ -128,5 +128,6 @@ export const mechanicBulkCreateSchema = objectField({
 
 export const mechanicBulkStatusSchema = objectField({
   ids: arrayField(numberField({ integer: true, min: 1, coerce: true }), { minLength: 1 }),
-  status: enumField(MECHANIC_STATUSES)
+  status: enumField(MECHANIC_STATUSES),
+  remarks: optional(stringField())
 });

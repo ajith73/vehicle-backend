@@ -49,6 +49,8 @@ adminRoutes.post('/mechanics/:id/approve', superAdminOnly, mechanicController.ap
 
 // Update Requests
 adminRoutes.get('/update-requests', mechanicController.getUpdateRequests as any);
+adminRoutes.get('/update-requests/:id', mechanicController.getUpdateRequestById as any);
+adminRoutes.put('/update-requests/:id', mechanicController.updateUpdateRequest as any);
 adminRoutes.delete('/update-requests/:id', superAdminOnly, mechanicController.deleteUpdateRequest as any);
 adminRoutes.post('/update-requests/:id/approve', superAdminOnly, mechanicController.approveUpdateRequest as any);
 adminRoutes.post('/update-requests/:id/reject', superAdminOnly, mechanicController.rejectUpdateRequest as any);

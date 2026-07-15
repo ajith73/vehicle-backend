@@ -12,6 +12,7 @@ MechanicUpdateRequest.init(
       type: DataTypes.ENUM('Pending Update Approval', 'Approved', 'Rejected'),
       defaultValue: 'Pending Update Approval',
     },
+    remarks: { type: DataTypes.TEXT, allowNull: true },
   },
   { sequelize, modelName: 'MechanicUpdateRequest' }
 );
