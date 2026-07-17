@@ -131,6 +131,7 @@ const initialSchemaMigration: Migration = {
       availability: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
       image: { type: DataTypes.STRING, allowNull: true },
       websiteUrl: { type: DataTypes.STRING, allowNull: true },
+      googlePlaceId: { type: DataTypes.STRING, allowNull: true },
       rating: { type: DataTypes.FLOAT, allowNull: false, defaultValue: 0 },
       status: {
         type: DataTypes.ENUM('Pending', 'Approved', 'Rejected', 'Inactive'),
@@ -305,6 +306,19 @@ const addUserDeletedAtMigration: Migration = {
   }
 };
 
+const addGooglePlaceIdMigration: Migration = {
+  name: '009-add-google-place-id',
+  up: async (queryInterface) => {
+    const tableDesc = await queryInterface.describeTable('Mechanics');
+    if (!tableDesc.googlePlaceId) {
+      await queryInterface.addColumn('Mechanics', 'googlePlaceId', {
+        type: DataTypes.STRING,
+        allowNull: true,
+      });
+    }
+  }
+};
+
 export const migrations: Migration[] = [
   initialSchemaMigration,
   addPincodeMigration,
@@ -313,5 +327,6 @@ export const migrations: Migration[] = [
   addDonationFieldsMigration,
   addMechanicRemarksMigration,
   addMechanicUpdateRequestRemarksMigration,
-  addUserDeletedAtMigration
+  addUserDeletedAtMigration,
+  addGooglePlaceIdMigration
 ];

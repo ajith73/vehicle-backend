@@ -36,6 +36,7 @@ Mechanic.init(
     availability: { type: DataTypes.BOOLEAN, defaultValue: true },
     image: { type: DataTypes.STRING, allowNull: true },
     websiteUrl: { type: DataTypes.STRING, allowNull: true },
+    googlePlaceId: { type: DataTypes.STRING, allowNull: true },
     rating: { type: DataTypes.FLOAT, defaultValue: 0 },
     status: {
       type: DataTypes.ENUM('Pending', 'Approved', 'Rejected', 'Inactive'),

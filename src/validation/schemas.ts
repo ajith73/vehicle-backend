@@ -34,6 +34,7 @@ const mechanicPayloadShape = {
   description: optional(stringField()),
   image: optional(stringField()),
   websiteUrl: optional(stringField()),
+  googlePlaceId: optional(stringField()),
   phone: arrayField(phoneSchema, { minLength: 1 }),
   emails: optional(arrayField(stringField({ minLength: 3 }))),
   address: stringField({ minLength: 1 }),

@@ -12,7 +12,7 @@ import { logger, registerProcessErrorHandlers } from './lib/logger';
 const app = express();
 registerProcessErrorHandlers();
 
-app.use(cors());
+app.use(cors({ exposedHeaders: ['X-Total-Count'] }));
 app.use(express.json());
 app.use(requestLoggingMiddleware);
 

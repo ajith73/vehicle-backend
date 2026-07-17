@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import axios from 'axios';
 import { Op, col, fn, where as sqlWhere } from 'sequelize';
 import { Mechanic, MechanicUpdateRequest, ActivityLog, User } from '../models';
 import { AuthRequest } from '../middleware/authMiddleware';
@@ -517,5 +518,32 @@ export const updateUpdateRequest = async (req: AuthRequest, res: Response) => {
     res.json({ message: 'Update request modified successfully' });
   } catch (error) {
     handleControllerError(req, res, error, 'Failed to modify update request');
+  }
+};
+
+export const fetchFromGMapsScraper = async (req: AuthRequest, res: Response) => {
+  try {
+    const { start, end, limit } = req.query;
+    
+    // Calling the GMapsScraper API running on localhost:8765
+    let scraperUrl = process.env.GMAPS_SCRAPER_URL || 'http://localhost:8765/api/records';
+    
+    const params = new URLSearchParams();
+    if (start) params.append('start', String(start));
+    if (end) params.append('end', String(end));
+    if (limit) params.append('limit', String(limit));
+    
+    const queryString = params.toString();
+    if (queryString) {
+      scraperUrl += `?${queryString}`;
+    }
+
+    const response = await axios.get(scraperUrl);
+    
+    // The scraper API returns { records: [...], job: {...} }
+    const records = response.data.records || response.data;
+    res.json(records);
+  } catch (error) {
+    handleControllerError(req, res, error, 'Failed to fetch data from GMapsScraper');
   }
 };

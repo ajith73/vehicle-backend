@@ -132,6 +132,7 @@ export const getMechanics = async (req: Request, res: Response) => {
     
     const paginated = processed.slice(offset, offset + parsedLimit);
 
+    res.setHeader('X-Total-Count', processed.length.toString());
     res.json(paginated);
   } catch (error: any) {
     handleControllerError(req, res, error, 'Failed to fetch mechanics');
